@@ -242,68 +242,136 @@ export default function App() {
       const modelInfo = GEN_MODELS.find(m => m.id === selectedModel);
       const isGemini = modelInfo?.type === 'gemini';
 
-      const prompt = `你是一個極度專業且高產的數位內容創作者、雜誌主編與資深資料分析師。請依照以下步驟，將提供的 YouTube 逐字稿轉換成一篇「極致詳盡、萬字等級」的深度超長篇分析文章：
+      const callModel = async (promptText: string, systemContext?: string, isJson?: boolean): Promise<string> => {
+        if (isGemini) {
+          const activeKey = geminiKey || (process.env.GEMINI_API_KEY as string);
+          if (!activeKey) throw new Error('找不到 Gemini API Key');
+          const ai = new GoogleGenAI({ apiKey: activeKey });
+          
+          let contents = '';
+          if (systemContext) contents += `【系統提示】\n${systemContext}\n\n`;
+          contents += promptText;
 
-1. **提煉講者核心思維與背景解析**：深入分析影片的語氣、脈絡、言外之意與所屬的專業領域。剖析講者的核心價值觀與底層邏輯，文章的語氣必須與影片完全一致，但以專業的長篇文字重新包裝。
-2. **建立清晰的故事線與巨量擴寫 (強制擴充到 5000 字以上)**：
-   - 絕不能只是簡單摘要！你必須逐字逐段地進行「巨量擴寫」、「延伸探討」、「極度深入的背景知識補充」、「產業影響分析與歷史脈絡」。
-   - 每提到一個細節，就必須發散論述，引經據典，提供詳盡的衍伸、歷史背景、相關的實務案例分析與對比。
-   - 【強制字數限制】文章總字數**絕對不可低於 5,000 字**！內容深度必須達到學術論文或頂級商業雜誌（如《哈佛商業評論》特刊）的水準。為達此目標，請不要只討論表面，深入每一個概念的底層邏輯。
-   - 保留原意但進行極其深度的延伸。
-3. **結構與排版要求**：
-   - 使用大量的 H2、H3、H4 標題來建立層次結構。
-   - 各大段落必須包含「核心觀點解析」、「實務應用探討」、「背後邏輯與未來發展預測」等子單元。
-   - 【關鍵】引用至少 **20 段** 重要的「受訪內容實況金句」(使用 Markdown blockquote)，大量傳達當時訪問的對話重點與原句細節。
-   - 【強制翻譯】如果引用的內容原本為「英文」等非中文語言，請務必在引用文字的下方，加上一段**高水準的繁體中文翻譯**。
-   - 對每一段引言進行深刻的解析與延伸論述（每段解析至少200字以上），讓讀者如臨其境。
-4. **多角度辯證、行動呼籲與重點反思**：
-   - 引入反面觀點與多角度的批判性思考。深入剖析影片中可能的「潛在資訊偏誤」、「倖存者偏差」或「未被提及的風險」。
-   - 增加讀者的互動感，在段落間拋出具啟發性的提問。
-   - 文章最後附上 H2 標題「深度重點反思與產業洞察」及「行動呼籲 (Call to Action)」，提供讀者具體的實踐建議。
-   - 附上至少 **5 個** 真實、具有權威性的相關參考方向（如相關學術領域、頂級期刊或主流媒體關鍵字），並寫出詳細的推薦閱讀理由。
+          const response = await ai.models.generateContent({
+            model: selectedModel,
+            contents: contents,
+            config: isJson ? { responseMimeType: "application/json" } : undefined
+          });
+          return response.text || '';
+        } else {
+          if (!openAiKey) throw new Error('請在側邊欄輸入 OpenAI API Key');
+          const generateRes = await fetch('/api/generate-openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              transcript,
+              apiKey: openAiKey,
+              model: selectedModel,
+              prompt: systemContext ? `${systemContext}\n\n${promptText}` : promptText,
+              isJson: isJson
+            }),
+          });
+          const generateData = await generateRes.json();
+          if (!generateRes.ok) throw new Error(generateData.error);
+          return generateData.result;
+        }
+      };
 
-請不要吝嗇字數，盡你所能輸出最長、最詳細、大量引述原話（必要時英中對照）、最具深度的正體中文（台灣）分析長文。記住：這是一篇要求突破 5000 字的殿堂級深度長文，請全力以赴不斷往深處挖掘與擴寫！`;
+      setProgress(50);
+      setStatusMsg('第一階段：分析逐字稿，提取大綱與關鍵議題...');
 
-      setProgress(60);
+      const step1SystemContext = `你是一個極度專業的數位內容創作者與資深資料分析師。請分析逐字稿並回傳純 JSON 格式資料。如果系統不支援 JSON schema，請務必只輸出 JSON，不要加 markdown block。`;
+      const step1Prompt = `請閱讀以下逐字稿，提取「核心大綱」、「10大金句」以及「3個關鍵議題」。
+你必須完全以 JSON 格式回傳，內容必須遵循以下結構：
+{
+  "title": "文章標題 (吸引人且專業)",
+  "overview": "文章前言與核心大綱 (約 300 字)",
+  "keyQuotes": [ "金句1", "金句2", "金句3", "金句4", "金句5", "金句6", "金句7", "金句8", "金句9", "金句10" ],
+  "issues": [
+    { "id": 1, "topic": "關鍵議題 一：...", "context": "探討的方向與細節..." },
+    { "id": 2, "topic": "關鍵議題 二：...", "context": "探討的方向與細節..." },
+    { "id": 3, "topic": "關鍵議題 三：...", "context": "探討的方向與細節..." }
+  ],
+  "conclusionDirection": "總結與反思方向預告"
+}
 
-      let finalContent = '';
-      setStatusMsg('AI 分析與撰寫文章中...');
+以下是逐字稿內容：
+${transcript}
+`;
+
+      const step1Result = await callModel(step1Prompt, step1SystemContext, true);
+      let outline;
+      try {
+        // Strip markdown if it was returned
+        let cleanJson = step1Result.replace(/```json\n?/g, '').replace(/```/g, '').trim();
+        outline = JSON.parse(cleanJson);
+      } catch (e) {
+        console.error("Failed to parse JSON", step1Result);
+        throw new Error("模型回傳的大綱格式錯誤，請再試一次。");
+      }
+
+      let finalContent = `# ${outline.title}\n\n${outline.overview}\n\n---\n\n`;
+      let totalTokensAccumulated = 0;
       setFullTranscript(transcript);
 
-      if (isGemini) {
-        const activeKey = geminiKey || (process.env.GEMINI_API_KEY as string);
-        if (!activeKey) throw new Error('找不到 Gemini API Key');
-        
-        const ai = new GoogleGenAI({ apiKey: activeKey });
-        const response = await ai.models.generateContent({
-          model: selectedModel,
-          contents: `${prompt}\n\n逐字稿內容：\n${transcript}`,
-        });
-        finalContent = response.text || '';
-      } else {
-        if (!openAiKey) {
-          throw new Error('請在側邊欄輸入 OpenAI API Key');
-        }
-        
-        const generateRes = await fetch('/api/generate-openai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transcript,
-            apiKey: openAiKey,
-            model: selectedModel,
-            prompt
-          }),
-        });
-        const generateData = await generateRes.json();
-        if (!generateRes.ok) throw new Error(generateData.error);
-        finalContent = generateData.result;
+      // We process each issue sequentially to show progress, or concurrently if we want speed.
+      // Doing sequentially helps give feedback.
+      for (let i = 0; i < outline.issues.length; i++) {
+        const issue = outline.issues[i];
+        setProgress(50 + (i * 10));
+        setStatusMsg(`第二階段：深入探討關鍵議題 ${i + 1}/${outline.issues.length} (${issue.topic.substring(0, 15)}...)...`);
+
+        const step2SystemContext = `你是一個極度專業的商業分析師與專欄作家。正在撰寫一篇超過 5000 字的殿堂級深度解析長文的重要段落。`;
+        const step2Prompt = `這篇文章的主題是：${outline.title}
+文章核心大綱：${outline.overview}
+
+現在，請【只針對以下這個關鍵議題】進行「巨量擴寫」：
+議題：${issue.topic}
+探討方向：${issue.context}
+
+規範：
+1. 字數要求：這一段落必須寫滿至少 1500 字！請不斷往深處挖掘、延伸論述。絕不能只是簡單摘要！
+2. 內容要求：進行「背景知識補充」、「產業影響分析與歷史脈絡」。每提到一個細節，就發散論述，提供實務案例分析與對比。深入底層邏輯。
+3. 結構要求：使用 Markdown 格式（以 H2 \`##\` 開頭）。必須包含「核心觀點解析」、「實務應用探討」、「背後邏輯預測」等子單元。
+4. 金句引用：請適當從這清單中引用金句（隨你挑選相關的，若無相關可忽略）：${JSON.stringify(outline.keyQuotes)}。引用時使用 Markdown blockquote \`>\`，並在引用後加上至少200字的深度解析。如翻譯外語需加繁中翻譯。
+5. 不要寫任何文章結語，也不要包含整體文章的前言，只需專注在這個段落。
+
+以下是完整的逐字稿作為參考：
+${transcript}
+`;
+        const issueContent = await callModel(step2Prompt, step2SystemContext);
+        finalContent += `${issueContent}\n\n---\n\n`;
       }
+
+      setProgress(90);
+      setStatusMsg('第三階段：撰寫深度重點反思與收尾...');
+      
+      const step3SystemContext = `你是一個極度專業的商業分析師與專欄作家。正在為一篇深度長文撰寫結尾與反思。`;
+      const step3Prompt = `文章主題：${outline.title}
+文章大綱：${outline.overview}
+
+請為這篇深度長文寫一個強而有力的結尾段落與反思。
+方向：${outline.conclusionDirection}
+
+規範：
+1. 多角度辯證：引入反面觀點與批判性思考。深入剖析影片「潛在資訊偏誤」、「倖存者偏差」或「未被提及的風險」。
+2. 行動呼籲：給讀者具體實踐建議。
+3. 參考文獻：附上至少 5 個真實、具權威性的相關參考方向（如學術領域、頂級期刊或關鍵字），並詳細寫出推薦理由。
+4. 字數要求：至少寫滿 1000 字。
+5. 結構：以 \`## 深度重點反思與產業洞察\` 開頭，接著 \`## 行動呼籲 (Call to Action)\`，最後是 \`## 參考文獻與延伸閱讀\`。
+
+完整的逐字稿參考：
+${transcript}
+`;
+      const conclusionContent = await callModel(step3Prompt, step3SystemContext);
+      finalContent += `${conclusionContent}\n`;
 
       setBlogPost(finalContent);
       
-      // Calculate Cost
-      const info = calculateCost(prompt.length + transcript.length, finalContent.length, selectedModel);
+      // Calculate approximate Cost (3 calls + 1 setup call means transcript is passed 4 times total + some output)
+      // Actually it's passed 1 + issues.length + 1 times.
+      const multiplier = 2 + outline.issues.length;
+      const info = calculateCost((step1Prompt.length + transcript.length) * multiplier, finalContent.length, selectedModel);
       setUsageInfo({
         ...info,
         whisperCostTWD: whisperCost * 32, // Convert USD to TWD

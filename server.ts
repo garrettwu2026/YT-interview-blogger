@@ -257,7 +257,7 @@ async function startServer() {
   });
 
   app.post("/api/generate-openai", async (req, res) => {
-    const { transcript, apiKey, model, prompt } = req.body;
+    const { transcript, apiKey, model, prompt, isJson } = req.body;
     if (!apiKey) return res.status(400).json({ error: "API Key is required" });
 
     try {
@@ -268,6 +268,7 @@ async function startServer() {
           { role: "system", content: "You are a professional blog writer. Write in Traditional Chinese (Taiwan)." },
           { role: "user", content: `${prompt}\n\nTranscript:\n${transcript}` }
         ],
+        response_format: isJson ? { type: "json_object" } : undefined
       });
       res.json({ result: response.choices[0].message.content });
     } catch (error: any) {
