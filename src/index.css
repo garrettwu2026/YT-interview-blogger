@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-gold: #d4af37;
+  --color-gold-light: #f9e79f;
+  --color-dark-ebony: #0c0c0e;
+  --color-dark-charcoal: #111114;
+  --color-dark-steel: #1c1c1f;
+  --color-border-subtle: #2a2a2e;
+  --color-text-dim: #e2e2e7;
+}
+
+/* Custom scrollbar for dark theme */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold);
+}
+
+.prose {
+  @apply text-white/70 leading-loose font-sans;
+}
+
+.prose h1 {
+  @apply text-4xl font-serif text-[#fcfcfc] leading-tight mb-8;
+}
+
+.prose h2 {
+  @apply text-sm font-bold uppercase text-gold border-b border-white/10 pb-2 mt-14 mb-6 tracking-[0.2em];
+}
+
+.prose h3 {
+  @apply text-xl font-serif text-white/90 mt-10 mb-4;
+}
+
+.prose p {
+  @apply mb-6 text-lg text-white/80 leading-loose;
+}
+
+.prose blockquote {
+  @apply italic border-l-2 border-gold pl-6 py-2 bg-white/[0.02] rounded-r-lg my-8 text-white/70 leading-loose mx-0 text-lg;
+}
+
+.prose ul, .prose ol {
+  @apply mb-6 ml-6 space-y-3 text-lg text-white/80 leading-loose;
+}
+
+.prose ul {
+  @apply list-disc;
+}
+
+.prose ol {
+  @apply list-decimal;
+}
+
+.prose a {
+  @apply text-gold underline decoration-gold/30 underline-offset-4 hover:decoration-gold transition-all;
+}
+
+.prose hr {
+  @apply my-10 border-white/5;
+}
+
+.prose strong {
+  @apply font-bold text-white/90;
+}
