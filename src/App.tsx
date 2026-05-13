@@ -281,11 +281,12 @@ export default function App() {
       setStatusMsg('第一階段：分析逐字稿，提取大綱與關鍵議題...');
 
       const step1SystemContext = `你是一個極度專業的數位內容創作者與資深資料分析師。請分析逐字稿並回傳純 JSON 格式資料。如果系統不支援 JSON schema，請務必只輸出 JSON，不要加 markdown block。`;
-      const step1Prompt = `請閱讀以下逐字稿，提取「核心大綱」、「10大金句」以及「3個關鍵議題」。
+      const step1Prompt = `請閱讀以下逐字稿，提取「核心大綱」、「10大金句」、「3個關鍵議題」以及「全文思維導圖」。
 你必須完全以 JSON 格式回傳，內容必須遵循以下結構：
 {
   "title": "文章標題 (吸引人且專業)",
   "overview": "文章前言與核心大綱 (約 300 字)",
+  "mindMap": "全文思維導圖 (Markdown 條列式清單結構，用以讓讀者有宏觀視角，預覽接下來的關鍵議題與文章架構)",
   "keyQuotes": [ "金句1", "金句2", "金句3", "金句4", "金句5", "金句6", "金句7", "金句8", "金句9", "金句10" ],
   "issues": [
     { "id": 1, "topic": "關鍵議題 一：...", "context": "探討的方向與細節..." },
@@ -310,7 +311,7 @@ ${transcript}
         throw new Error("模型回傳的大綱格式錯誤，請再試一次。");
       }
 
-      let finalContent = `# ${outline.title}\n\n${outline.overview}\n\n---\n\n`;
+      let finalContent = `# ${outline.title}\n\n${outline.overview}\n\n## 全文思維導圖 / 目錄架構\n\n${outline.mindMap}\n\n---\n\n`;
       let totalTokensAccumulated = 0;
       setFullTranscript(transcript);
 
