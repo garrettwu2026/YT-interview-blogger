@@ -77,3 +77,74 @@
 .prose strong {
   @apply font-bold text-white/90;
 }
+
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  /* Hide sidebar, header, and buttons */
+  header, aside, button {
+    display: none !important;
+  }
+  
+  /* Ensure the content is fully expanded for printing */
+  main, .flex-1, #root, body, html, .h-screen {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  
+  main {
+    width: 100% !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    background-color: white !important;
+  }
+  
+  #blog-post-content {
+    background: transparent !important;
+    color: black !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  
+  .prose * {
+    color: #111 !important;
+  }
+
+  .prose h1, .prose h2, .prose h3, .text-white {
+    color: black !important;
+  }
+  
+  .prose .text-gold {
+    color: #444 !important;
+  }
+
+  .prose blockquote {
+    background: #f9f9f9 !important;
+    color: #333 !important;
+    border-left-color: #555 !important;
+  }
+  
+  /* Cost Summary styling in print */
+  #blog-post-content .border-t,
+  #blog-post-content .border-white\\/10 {
+    border-color: #ddd !important;
+  }
+  
+  #blog-post-content .bg-dark-charcoal\\/50 {
+    background: #fcfcfc !important;
+    border-color: #eee !important;
+  }
+  
+  #blog-post-content p {
+    color: #222 !important;
+  }
+  
+  .html2pdf-avoid-break {
+    page-break-inside: avoid;
+  }
+}

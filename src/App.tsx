@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -335,20 +333,7 @@ export default function App() {
   };
 
   const handleExportPdf = () => {
-    const element = document.getElementById('blog-post-content');
-    if (!element) return;
-    
-    // Add a temporary wrapper class for PDF to ensure dark mode text is legible if printed on white,
-    // actually html2pdf captures the styled element, so dark background will be captured.
-    const opt = {
-      margin:       15,
-      filename:     'AI-Article-Export.pdf',
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#1A1A1A' },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    
-    html2pdf().set(opt).from(element).save();
+    window.print();
   };
 
   return (
