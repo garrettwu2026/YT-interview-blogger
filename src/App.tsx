@@ -369,7 +369,7 @@ export default function App() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar: Configuration */}
-        <aside className="w-80 border-r border-border-subtle bg-dark-charcoal p-6 flex flex-col gap-8 overflow-y-auto">
+        <aside className="w-80 border-r border-border-subtle bg-dark-charcoal p-6 flex flex-col gap-8 overflow-y-auto custom-scrollbar">
           {/* API Configuration */}
           <section className="space-y-4">
             <h3 className="text-[10px] uppercase tracking-[0.2em] text-gold font-bold">模型設定</h3>
