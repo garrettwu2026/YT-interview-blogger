@@ -16,10 +16,10 @@ function cn(...inputs: ClassValue[]) {
 // Default models
 const GEN_MODELS = [
   { 
-    id: 'gemini-3.1-flash-lite', 
-    name: 'Gemini 3.1 Flash Lite (最快)', 
+    id: 'gemini-3-flash-preview', 
+    name: 'Gemini 3 Flash 預覽版 (快速)', 
     type: 'gemini',
-    price: { input: 0.075, output: 0.30 }
+    price: { input: 0.10, output: 0.40 }
   },
   { 
     id: 'gemini-3.1-pro-preview', 
@@ -28,10 +28,10 @@ const GEN_MODELS = [
     price: { input: 1.25, output: 5.00 }
   },
   { 
-    id: 'gemini-3-flash-preview', 
-    name: 'Gemini 3 Flash 預覽版 (快速)', 
+    id: 'gemini-3.1-flash-lite', 
+    name: 'Gemini 3.1 Flash Lite (最快)', 
     type: 'gemini',
-    price: { input: 0.10, output: 0.40 }
+    price: { input: 0.075, output: 0.30 }
   },
   { 
     id: 'gemini-2.5-pro', 
