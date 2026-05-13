@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Youtube, Key, Sparkles, BookOpen, AlertCircle, Loader2, ChevronRight, Clipboard, Check, FileDown } from 'lucide-react';
+import { Youtube, Key, Sparkles, BookOpen, AlertCircle, Loader2, ChevronRight, Clipboard, Check, FileDown, FileCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
@@ -336,6 +336,65 @@ export default function App() {
     window.print();
   };
 
+  const handleExportHtml = () => {
+    const element = document.getElementById('blog-post-content');
+    if (!element) return;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="zh-TW">
+      <head>
+        <meta charset="UTF-8">
+        <title>AI 訪談整理專家 - 匯出文章</title>
+        <style>
+          body {
+            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+            background-color: #1a1a1a;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 2;
+            padding: 40px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          h1, h2, h3, h4 { color: rgba(255, 255, 255, 0.9); font-weight: 700; margin-top: 2.5em; margin-bottom: 1em; }
+          h2 { color: #d4af37; font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5em; }
+          h3 { font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; font-size: 1.35rem; }
+          p { margin-bottom: 1.5em; font-size: 1.125rem; }
+          blockquote {
+            font-style: italic;
+            border-left: 2px solid #d4af37;
+            padding: 15px 25px;
+            background-color: rgba(255,255,255,0.02);
+            margin: 2em 0;
+            color: rgba(255, 255, 255, 0.7);
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+          }
+          ul, ol { margin-bottom: 1.5em; padding-left: 1.5em; font-size: 1.125rem; }
+          li { margin-bottom: 0.75em; }
+          strong { color: rgba(255, 255, 255, 0.9); font-weight: bold; }
+          a { color: #d4af37; text-decoration: underline; }
+          
+          /* Hide things like Cost Summary from the HTML export if necessary, but it looks fine within context */
+        </style>
+      </head>
+      <body>
+        ${element.innerHTML}
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'AI-Article-Export.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-screen w-full bg-dark-ebony text-text-dim font-sans overflow-hidden">
       {/* Top Navigation Header */}
@@ -596,13 +655,22 @@ export default function App() {
             {(blogPost || fullTranscript) && (
               <div className="absolute top-4 right-4 z-20 flex gap-2">
                 {activeTab === 'blog' && (
-                  <button
-                    onClick={handleExportPdf}
-                    className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-dark-charcoal/80 backdrop-blur-sm border border-border-subtle rounded hover:bg-dark-steel transition-all text-white/80 hover:text-white"
-                  >
-                    <FileDown className="w-3 h-3" />
-                    輸出 PDF
-                  </button>
+                  <>
+                    <button
+                      onClick={handleExportHtml}
+                      className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-dark-charcoal/80 backdrop-blur-sm border border-border-subtle rounded hover:bg-dark-steel transition-all text-white/80 hover:text-white"
+                    >
+                      <FileCode className="w-3 h-3" />
+                      輸出 HTML
+                    </button>
+                    <button
+                      onClick={handleExportPdf}
+                      className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-dark-charcoal/80 backdrop-blur-sm border border-border-subtle rounded hover:bg-dark-steel transition-all text-white/80 hover:text-white"
+                    >
+                      <FileDown className="w-3 h-3" />
+                      輸出 PDF
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={handleCopy}
