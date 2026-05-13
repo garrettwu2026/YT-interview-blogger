@@ -1,5 +1,5 @@
 {
-  "name": "YT Blog AI Assistant",
+  "name": "AI 訪談整理專家",
   "description": "Extract YouTube transcripts and generate polished blog posts using Gemini or OpenAI models.",
   "requestFramePermissions": [],
   "majorCapabilities": []
