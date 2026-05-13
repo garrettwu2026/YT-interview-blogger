@@ -92,7 +92,7 @@ export default function App() {
   const [interimTranscript, setInterimTranscript] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [usageInfo, setUsageInfo] = useState<{ tokens: number; costTWD: number, whisperCostTWD?: number } | null>(null);
+  const [usageInfo, setUsageInfo] = useState<{ tokens: number; costTWD: number, whisperCostTWD?: number, transcriptLength?: number, blogLength?: number } | null>(null);
 
   // Load keys from localStorage if any
   useEffect(() => {
@@ -282,7 +282,9 @@ export default function App() {
       setStatusMsg('第一階段：分析逐字稿，提取大綱與關鍵議題...');
 
       const step1SystemContext = `你是一個極度專業的數位內容創作者與資深資料分析師。請分析逐字稿並回傳純 JSON 格式資料。如果系統不支援 JSON schema，請務必只輸出 JSON，不要加 markdown block。`;
-      const step1Prompt = `請閱讀以下逐字稿，提取「核心大綱」、「10大金句」、「全文思維導圖」，並根據文本長度與內容豐富度，動態提取「2 到 6 個最核心的關鍵議題」。
+      const step1Prompt = `請閱讀以下逐字稿，提取「核心大綱」、「10大金句」、「全文思維導圖」。
+此外，請根據文本長度與內容豐富度，動態提取「2 到 6 個最核心的關鍵議題」，並為每個議題指定擴寫字數（500 到 1500 字，依重要度決定）。
+
 你必須完全以 JSON 格式回傳，內容必須遵循以下結構：
 {
   "title": "文章標題 (吸引人且專業)",
@@ -290,9 +292,13 @@ export default function App() {
   "mindMap": "全文思維導圖 (Markdown 條列式清單結構，用以讓讀者有宏觀視角，預覽接下來的關鍵議題與文章架構)",
   "keyQuotes": [ "金句1", "金句2", "金句3", "金句4", "金句5", "金句6", "金句7", "金句8", "金句9", "金句10" ],
   "issues": [
-    { "id": 1, "topic": "關鍵議題 一：...", "context": "探討的方向與細節..." },
-    { "id": 2, "topic": "關鍵議題 二：...", "context": "探討的方向與細節..." }
-    // 根據內容長度與豐富度，請自行決定要產生幾個關鍵議題（至少 2 個，最多 6 個）
+    { 
+      "id": 1, 
+      "topic": "關鍵議題 一：...", 
+      "context": "探討的方向與細節...",
+      "targetWords": 1200
+    }
+    // 根據內容長短與豐富度，決定產生 2-6 個議題。targetWords 介於 500-1500。
   ],
   "conclusionDirection": "總結與反思方向預告"
 }
@@ -304,7 +310,6 @@ ${transcript}
       const step1Result = await callModel(step1Prompt, step1SystemContext, true);
       let outline;
       try {
-        // Strip markdown if it was returned
         let cleanJson = step1Result.replace(/```json\n?/g, '').replace(/```/g, '').trim();
         outline = JSON.parse(cleanJson);
       } catch (e) {
@@ -313,30 +318,28 @@ ${transcript}
       }
 
       let finalContent = `# ${outline.title}\n\n${outline.overview}\n\n## 全文思維導圖 / 目錄架構\n\n${outline.mindMap}\n\n---\n\n`;
-      let totalTokensAccumulated = 0;
       setFullTranscript(transcript);
 
-      // We process each issue sequentially to show progress, or concurrently if we want speed.
-      // Doing sequentially helps give feedback.
+      // Process each issue sequentially
       for (let i = 0; i < outline.issues.length; i++) {
         const issue = outline.issues[i];
         setProgress(50 + (i * 10));
         setStatusMsg(`第二階段：深入探討關鍵議題 ${i + 1}/${outline.issues.length} (${issue.topic.substring(0, 15)}...)...`);
 
-        const step2SystemContext = `你是一個極度專業的商業分析師與專欄作家。正在撰寫一篇超過 5000 字的殿堂級深度解析長文的重要段落。`;
+        const step2SystemContext = `你是一個極度專業的商業分析師與專欄作家。正在撰寫一篇深度解析長文的重要段落。`;
         const step2Prompt = `這篇文章的主題是：${outline.title}
-文章核心大綱：${outline.overview}
+文章大綱概要：${outline.overview}
 
-現在，請【只針對以下這個關鍵議題】進行「巨量擴寫」：
+現在，請【只針對以下這個關鍵議題】進行深度撰寫：
 議題：${issue.topic}
 探討方向：${issue.context}
 
 規範：
-1. 字數要求：這一段落必須寫滿至少 1500 字！請不斷往深處挖掘、延伸論述。絕不能只是簡單摘要！
+1. 字數要求：這一段落必須寫滿約 ${issue.targetWords || 1000} 字！請根據重要度進行深度挖掘。
 2. 內容要求：進行「背景知識補充」、「產業影響分析與歷史脈絡」。每提到一個細節，就發散論述，提供實務案例分析與對比。深入底層邏輯。
 3. 結構要求：使用 Markdown 格式（以 H2 \`##\` 開頭）。必須包含「核心觀點解析」、「實務應用探討」、「背後邏輯預測」等子單元。
-4. 金句引用：請適當從這清單中引用金句（隨你挑選相關的，若無相關可忽略）：${JSON.stringify(outline.keyQuotes)}。引用時使用 Markdown blockquote \`>\`，並在引用後加上至少200字的深度解析。如翻譯外語需加繁中翻譯。
-5. 不要寫任何文章結語，也不要包含整體文章的前言，只需專注在這個段落。
+4. 金句引用：請適當從這清單中引用金句：${JSON.stringify(outline.keyQuotes)}。引用時使用 Markdown blockquote \`>\`。
+5. 不要寫任何文章結語，不需包含前言，專注在這個議題的論述。
 
 以下是完整的逐字稿作為參考：
 ${transcript}
@@ -377,6 +380,8 @@ ${transcript}
       setUsageInfo({
         ...info,
         whisperCostTWD: whisperCost * 32, // Convert USD to TWD
+        transcriptLength: transcript.length,
+        blogLength: finalContent.length
       });
       
       setProgress(100);
@@ -820,24 +825,26 @@ ${transcript}
                       {/* Cost Summary Table within Blog Post View */}
                       {usageInfo && (
                         <div className="mt-16 pt-8 border-t border-white/10 html2pdf-avoid-break">
-                          <h3 className="text-sm font-bold text-white/80 mb-4 uppercase tracking-widest">花費總表 (Cost Summary)</h3>
-                          <div className="bg-dark-charcoal/50 border border-border-subtle rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="space-y-1">
-                              <p className="text-[11px] text-white/50 uppercase tracking-wider">預計消耗 Token</p>
-                              <p className="text-xl font-mono text-gold">{usageInfo.tokens.toLocaleString()}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-[11px] text-white/50 uppercase tracking-wider">AI 文章生成費用</p>
-                              <p className="text-xl font-mono text-gold">NT$ {usageInfo.costTWD.toFixed(2)}</p>
-                            </div>
-                            {usageInfo.whisperCostTWD !== undefined && (
+                          <h3 className="text-sm font-bold text-white/80 mb-4 uppercase tracking-widest">系統總結 (System Summary)</h3>
+                          <div className="bg-dark-charcoal/50 border border-border-subtle rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-wrap">
+                            {usageInfo.transcriptLength !== undefined && (
                               <div className="space-y-1">
-                                <p className="text-[11px] text-white/50 uppercase tracking-wider">Whisper 聽寫費用</p>
-                                <p className="text-xl font-mono text-gold">NT$ {usageInfo.whisperCostTWD.toFixed(2)}</p>
+                                <p className="text-[11px] text-white/50 uppercase tracking-wider">原始逐字稿字數</p>
+                                <p className="text-xl font-mono text-gold">{usageInfo.transcriptLength.toLocaleString()}</p>
                               </div>
                             )}
-                            <div className="space-y-1 sm:text-right">
-                              <p className="text-[11px] text-white/50 uppercase tracking-wider">總計花費</p>
+                            {usageInfo.blogLength !== undefined && (
+                              <div className="space-y-1">
+                                <p className="text-[11px] text-white/50 uppercase tracking-wider">分析文章總字數</p>
+                                <p className="text-xl font-mono text-gold">{usageInfo.blogLength.toLocaleString()}</p>
+                              </div>
+                            )}
+                            <div className="space-y-1">
+                              <p className="text-[11px] text-white/50 uppercase tracking-wider">預計消耗 Token</p>
+                              <p className="text-xl font-mono text-white/90">{usageInfo.tokens.toLocaleString()}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[11px] text-white/50 uppercase tracking-wider">估算總花費</p>
                               <p className="text-xl font-mono text-white font-bold">NT$ {((usageInfo.costTWD || 0) + (usageInfo.whisperCostTWD || 0)).toFixed(2)}</p>
                             </div>
                           </div>
